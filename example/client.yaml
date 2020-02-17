@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+spec:
+  selector:
+    matchLabels:
+      app: kube-audience-proxy
+  template:
+    metadata:
+      name: client
+      labels:
+        app: kube-audience-proxy
+    spec:
+      containers:
+      - name: client
+        image: quay.io/brancz/krp-curl:v0.0.1
+        command: ["/bin/sleep", "3600"]
+        volumeMounts:
+        - mountPath: /shared-ca
+          name: shared-ca
+      - name: proxy
+        image: quay.io/brancz/kube-audience-proxy:v0.1.0
+        args:
+        - "--log-level=debug"
+        - "--v=10"
+        - "--logtostderr=true"
+        - "--insecure-skip-tls-verify"
+        - "--secure-listen-address=127.0.0.1:8443"
+        - "--insecure-listen-address=127.0.0.1:8080"
+        - "--ca-file-destination=/shared-ca/ca.crt"
+        volumeMounts:
+        - mountPath: /shared-ca
+          name: shared-ca
+        env:
+        - name: SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+      volumes:
+      - name: shared-ca
+        emptyDir: {}
